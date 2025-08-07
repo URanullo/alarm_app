@@ -19,7 +19,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   title: {
-    fontSize: 32,
+    fontSize: 33,
     fontWeight: 'bold',
     color: '#E53935',
     marginBottom: 12,
@@ -30,4 +30,4 @@ const styles = StyleSheet.create({
     color: '#222',
     textAlign: 'center',
   },
-}); 
+});     
