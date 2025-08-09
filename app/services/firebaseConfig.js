@@ -1,7 +1,7 @@
-// firebaseConfig.js
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { initializeApp } from "firebase/app";
-import { getReactNativePersistence, initializeAuth } from "firebase/auth";
+import { browserLocalPersistence, getAuth, getReactNativePersistence, initializeAuth } from "firebase/auth";
+import { Platform } from 'react-native';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCFyDeqmRvrVaunGTAS3Wb3_pmxABN-ReU",
@@ -15,9 +15,15 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// ✅ This makes auth persist across app restarts
-const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage)
-});
+let auth;
+
+if (Platform.OS === 'web') {
+  auth = getAuth(app);
+  auth.setPersistence(browserLocalPersistence);
+} else {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+}
 
 export { auth };
