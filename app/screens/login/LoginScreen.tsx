@@ -11,8 +11,15 @@ import {
   ScrollView,
   StyleSheet
 } from 'react-native';
-import { auth, db } from "../../services/firebaseConfig";
+import { app, auth, db } from "../../services/firebaseConfig";
 import LoginForm from './LoginForm';
+
+let getMessaging, onMessage, getToken;
+if (Platform.OS === 'web') {
+  // Dynamically import only on web to avoid native errors
+  ({ getMessaging, onMessage, getToken } = require('firebase/messaging'));
+}
+
 
 const PROJECT_ID = "a37f2310-e046-4d8f-a929-828e378753b0";
 
@@ -37,9 +44,14 @@ export default function LoginScreen() {
       console.log("📱 Token saved for:", user.uid);
 
       if (token) {
-        await setDoc(doc(db, "users", user.uid), { pushToken: token }, { merge: true });
+        if (Platform.OS === 'web') {
+          // Save as fcmToken
+          await setDoc(doc(db, "users", user.uid), { fcmToken: token }, { merge: true });
+        } else {
+          // Save as expoPushToken
+          await setDoc(doc(db, "users", user.uid), { expoPushToken: token }, { merge: true });
+        }
       }
-
 
       // Send token to your backend
       await fetch("http://192.168.18.2:3000/save-token", {
@@ -78,16 +90,16 @@ export async function registerForPushNotificationsAsync() {
     try {
       const messaging = getMessaging(app);
 
-      // const permission = await Notification.requestPermission();
-      // if (permission === 'granted') {
-      //   const vapidKey = "BJ7xbLYiFbFrM96eJLpi3J4g9XXfb6cV6mWVJfRJ2tceuhe6RXY8Q6t8tzOR65ysgDdw-RX6lWiyLUoyfcoLPIs"; // from Firebase console → Project Settings → Cloud Messaging
-      //   const fcmToken = await getToken(messaging, { vapidKey });
-      //   console.log("🌐 Web FCM Token:", fcmToken);
-      //   return fcmToken;
-      // } else {
-      //   alert("Permission for notifications denied.");
-      //   return null;
-      // }
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        const vapidKey = "BJ7xbLYiFbFrM96eJLpi3J4g9XXfb6cV6mWVJfRJ2tceuhe6RXY8Q6t8tzOR65ysgDdw-RX6lWiyLUoyfcoLPIs"; // from Firebase console → Project Settings → Cloud Messaging
+        const fcmToken = await getToken(messaging, { vapidKey });
+        console.log("🌐 Web FCM Token:", fcmToken);
+        return fcmToken;
+      } else {
+        alert("Permission for notifications denied.");
+        return null;
+      }
     } catch (err) {
       console.error("Error getting FCM token for web:", err);
     }

@@ -2,14 +2,19 @@ import * as Notifications from 'expo-notifications';
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { Alert, Platform } from 'react-native';
-import app from '.';
+import { app } from './services/firebaseConfig'; // Use the correct path
+
+let getMessaging, onMessage;
+if (Platform.OS === 'web') {
+  // Dynamically import only on web to avoid native errors
+  ({ getMessaging, onMessage } = require('firebase/messaging'));
+}
 
 export default function RootLayout() {
   useEffect(() => {
     let subscription: Notifications.EventSubscription;
 
     if (Platform.OS === 'web') {
-       // 💻 Web push listener
       const messaging = getMessaging(app);
       onMessage(messaging, (payload) => {
         console.log('💻 Web notification received:', payload);
@@ -19,8 +24,8 @@ export default function RootLayout() {
         );
       });
     } else {
-     // 📱 Mobile push listener
-     Notifications.addNotificationReceivedListener(notification => {
+      // 📱 Mobile push listener
+      subscription = Notifications.addNotificationReceivedListener(notification => {
         console.log('📱 Mobile notification received:', notification);
         Alert.alert(
           notification.request.content.title || 'Notification',
@@ -29,9 +34,9 @@ export default function RootLayout() {
       });
     }
 
-    // return () => {
-    //   // if (subscription) subscription.remove?.();
-    // };
+    return () => {
+      if (subscription) subscription.remove?.();
+    };
   }, []);
 
   return <Stack screenOptions={{ headerShown: false }} />;

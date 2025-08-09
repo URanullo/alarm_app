@@ -28,4 +28,4 @@ if (Platform.OS === 'web') {
   });
 }
 
-export { auth, db };
+export { app, auth, db };
