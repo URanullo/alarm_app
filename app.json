@@ -1,13 +1,18 @@
 {
   "expo": {
-    "name": "MDRRMO",
-    "slug": "MDRRMO",
+    "name": "emergency-alarm-app",
+    "slug": "emergency-alarm-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mdrrmo",
+    "scheme": "emergency-alarm-app",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "extra": {
+      "eas": {
+        "projectId": "a37f2310-e046-4d8f-a929-828e378753b0"
+      }
+    },
     "ios": {
       "supportsTablet": true
     },
@@ -37,6 +42,7 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "owner": "uranullo"
   }
 }

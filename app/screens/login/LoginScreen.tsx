@@ -1,5 +1,9 @@
+import Constants from 'expo-constants';
+import * as Device from "expo-device";
+import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from "firebase/firestore";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -7,9 +11,10 @@ import {
   ScrollView,
   StyleSheet
 } from 'react-native';
-import { auth } from '../../services/firebaseConfig';
+import { auth, db } from "../../services/firebaseConfig";
 import LoginForm from './LoginForm';
 
+const PROJECT_ID = "a37f2310-e046-4d8f-a929-828e378753b0";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -23,7 +28,29 @@ export default function LoginScreen() {
     }
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log('Login successful:', userCredential.user);
+      const user = userCredential.user;
+
+      console.log('Login successful');
+      // Get push token
+      const token = await registerForPushNotificationsAsync();
+      console.log("📱 Expo Push Token:", token);
+      console.log("📱 Token saved for:", user.uid);
+
+      if (token) {
+        await setDoc(doc(db, "users", user.uid), { pushToken: token }, { merge: true });
+      }
+
+
+      // Send token to your backend
+      await fetch("http://192.168.18.2:3000/save-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: userCredential.user.uid,
+          token
+        })
+      });
+
     } catch (error) {
       Alert.alert('Login Failed', error.message);
     }
@@ -46,8 +73,61 @@ export default function LoginScreen() {
 }
 
 
+export async function registerForPushNotificationsAsync() {
+  if (Platform.OS === 'web') {
+    try {
+      const messaging = getMessaging(app);
+
+      // const permission = await Notification.requestPermission();
+      // if (permission === 'granted') {
+      //   const vapidKey = "BJ7xbLYiFbFrM96eJLpi3J4g9XXfb6cV6mWVJfRJ2tceuhe6RXY8Q6t8tzOR65ysgDdw-RX6lWiyLUoyfcoLPIs"; // from Firebase console → Project Settings → Cloud Messaging
+      //   const fcmToken = await getToken(messaging, { vapidKey });
+      //   console.log("🌐 Web FCM Token:", fcmToken);
+      //   return fcmToken;
+      // } else {
+      //   alert("Permission for notifications denied.");
+      //   return null;
+      // }
+    } catch (err) {
+      console.error("Error getting FCM token for web:", err);
+    }
+  } else {
+    // Native devices (Expo Notifications)
+    let token;
+    if (Device.isDevice) {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== "granted") {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== "granted") {
+        alert("Failed to get push token!");
+        return;
+      }
+      token = (await Notifications.getExpoPushTokenAsync({
+        projectId: Constants.expoConfig.extra.eas.projectId,
+      })).data;
+
+      if (Platform.OS === "android") {
+        await Notifications.setNotificationChannelAsync("default", {
+          name: "default",
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: "#FF231F7C",
+        });
+      }
+
+      console.log("📱 Native Push Token:", token);
+      return token;
+    } else {
+      alert("Must use physical device for push notifications");
+    }
+  }
+}
+
 const styles = StyleSheet.create({
-scrollContainer: {
+  scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center', // center when space available
     padding: 24,

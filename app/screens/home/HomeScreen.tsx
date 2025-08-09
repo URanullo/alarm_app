@@ -1,13 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dimensions, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { auth } from '../../services/firebaseConfig';
 
 const USER_NAME = 'Yover Nullo'; // Placeholder for user name
 
 export default function HomeScreen() {
   const [isVolunteer, setIsVolunteer] = useState(false);
   const router = useRouter();
+  const [userName, setUserName] = useState('');
+  const user = auth.currentUser;
+
+    useEffect(() => {
+    if (user) {
+      setUserName(user.displayName || user.email || 'User');
+    }
+  }, [user]);
 
   // Navigate to report emergency page
   const handleSOS = () => {
@@ -20,7 +29,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.hey}>Hey!</Text>
-          <Text style={styles.username}>{USER_NAME}</Text>
+          <Text style={styles.username}>{userName}</Text>
         </View>
         <TouchableOpacity style={styles.bellButton}>
           <Ionicons name="notifications-outline" size={26} color="#222" />
