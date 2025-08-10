@@ -4,8 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { Dimensions, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { auth } from '../../services/firebaseConfig';
 
-const USER_NAME = 'Yover Nullo'; // Placeholder for user name
-
 export default function HomeScreen() {
   const [isVolunteer, setIsVolunteer] = useState(false);
   const router = useRouter();
