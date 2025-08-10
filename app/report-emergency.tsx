@@ -1,6 +1,8 @@
+import { BASE_URL } from '@env';
 import { FontAwesome, FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { auth } from './services/firebaseConfig';
 
 export const unstable_settings = {
   headerShown: false,
@@ -21,10 +23,24 @@ export default function ReportEmergencyScreen() {
   const [selectedType, setSelectedType] = useState('accident');
   const [location, setLocation] = useState('Campo, Bacuag, Surigao City');
   const [description, setDescription] = useState('');
+  const user = auth.currentUser;
 
-  const handleSubmit = () => {
-    // Placeholder for submit logic
-    alert(`Emergency reported!\nType: ${selectedType}\nLocation: ${location}\nDescription: ${description}`);
+  const handleSubmit = async () => {
+    try {
+      console.log(`BASEURL: ${BASE_URL}/send-to-user`);
+      await fetch(`${BASE_URL}/send-to-user`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: 'police@gmail.com',
+          sound: 'default',
+          title: 'Alert! ' + selectedType.toUpperCase() + ' reported',
+          body: `\nLocation: ${location}\nDescription: ${description}\nReporter: ${user.displayName || user.email || 'User'}`
+        })
+      });
+    } catch (error) {
+      Alert.alert('Submit Failed', error.message);
+    }
   };
 
   const handleChangeLocation = () => {
