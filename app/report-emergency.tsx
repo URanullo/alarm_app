@@ -3,7 +3,8 @@ import { FontAwesome, FontAwesome5, Ionicons, MaterialCommunityIcons } from '@ex
 import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { auth } from './services/firebaseConfig';
-
+const baseUrl = Constants.expoConfig?.extra?.baseUrl;
+ console.log('baseUrl',baseUrl);
 export const unstable_settings = {
   headerShown: false,
 };
@@ -27,9 +28,8 @@ export default function ReportEmergencyScreen() {
 
   const handleSubmit = async () => {
     try {
-      console.log(`BASEURL: http://10.0.2.2:3000/send-to-user`);
-//       await fetch(`${BASE_URL}/send-to-user`, {
-      await fetch(`http://10.0.2.2:3000/send-to-user`, {
+      console.log(`BASEURL: ${baseUrl}/send-to-user`);
+      await fetch(`${baseUrl}/send-to-user`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
