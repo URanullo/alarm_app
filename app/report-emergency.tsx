@@ -1,8 +1,9 @@
-import { BASE_URL } from '@env';
 import { FontAwesome, FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { auth } from './services/firebaseConfig';
+import Constants from 'expo-constants';
+
 const baseUrl = Constants.expoConfig?.extra?.baseUrl;
  console.log('baseUrl',baseUrl);
 export const unstable_settings = {
