@@ -1,4 +1,3 @@
-import { BASE_URL } from '@env';
 import Constants from 'expo-constants';
 import * as Device from "expo-device";
 import * as Notifications from 'expo-notifications';
@@ -15,13 +14,8 @@ import {
 import { app, auth, db } from "../../services/firebaseConfig";
 import LoginForm from './LoginForm';
 
-console.log('Base URL:', BASE_URL);
-
-let getMessaging, onMessage, getToken;
-if (Platform.OS === 'web') {
-  // Dynamically import only on web to avoid native errors
-  ({ getMessaging, onMessage, getToken } = require('firebase/messaging'));
-}
+const baseUrl = Constants.expoConfig?.extra?.baseUrl;
+ console.log('baseUrl',baseUrl);
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -41,7 +35,6 @@ export default function LoginScreen() {
       // Get push token
       const token = await registerForPushNotificationsAsync();
       console.log("📱 Expo Push Token:", token);
-      console.log("📱 Token saved for:", user.uid);
 
       if (token) {
         if (Platform.OS === 'web') {
@@ -52,9 +45,7 @@ export default function LoginScreen() {
           await setDoc(doc(db, "users", user.uid), { expoPushToken: token }, { merge: true });
         }
       }
-      console.log('user.email ', user.email);
-      // Send token to your backend
-      await fetch(`${BASE_URL}/save-token`, {
+      await fetch(`${baseUrl}/save-token`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

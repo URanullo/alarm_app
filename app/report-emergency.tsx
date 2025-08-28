@@ -27,8 +27,9 @@ export default function ReportEmergencyScreen() {
 
   const handleSubmit = async () => {
     try {
-      console.log(`BASEURL: ${BASE_URL}/send-to-user`);
-      await fetch(`${BASE_URL}/send-to-user`, {
+      console.log(`BASEURL: http://10.0.2.2:3000/send-to-user`);
+//       await fetch(`${BASE_URL}/send-to-user`, {
+      await fetch(`http://10.0.2.2:3000/send-to-user`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
