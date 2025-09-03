@@ -39,7 +39,6 @@ export default function ReportEmergencyScreen() {
     }
     if (!baseUrl) {
         Alert.alert('Configuration Error', 'The base URL is not configured. Cannot submit report.');
-        console.error('baseUrl is undefined or null');
         return;
     }
     if (!selectedType || !description.trim()) {
@@ -80,8 +79,6 @@ export default function ReportEmergencyScreen() {
           const contentType = response.headers.get("content-type");
           if (contentType && contentType.includes("application/json")) {
             const errorData: ServerError = await response.json();
-            console.error('Server Error Response JSON:', errorData);
-
             if (errorData.error) {
               errorMessage = errorData.error;
             } else if (errorData.message) {
@@ -91,17 +88,14 @@ export default function ReportEmergencyScreen() {
             }
           } else {
             const errorText = await response.text();
-            console.error('Server Error Response Text:', errorText);
             errorMessage = errorText || 'Server returned a non-JSON error response.';
           }
         } catch (e) {
-          console.error('Failed to parse error response body:', e);
           errorMessage = 'Could not parse error details from server.';
         }
         Alert.alert(errorTitle, errorMessage);
       }
     } catch (error: any) {
-      console.error('Network or other fetch error:', error);
       Alert.alert('Submit Failed', `An error occurred: ${error.message || 'Please check your network connection.'}`);
     } finally {
       setIsLoading(false);
