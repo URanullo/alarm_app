@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 type LoginFormProps = {
-  onSubmit: (email: string, password: string) => void;
+  onSubmit: (email: string, password: string, isLoading: boolean) => void;
+  isLoading: boolean;
 };
 
-export default function LoginForm({ onSubmit }: LoginFormProps) {
+export default function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -34,8 +35,10 @@ export default function LoginForm({ onSubmit }: LoginFormProps) {
         placeholderTextColor="#bbb"
       />
 
-      <TouchableOpacity style={styles.button} onPress={() => onSubmit(email, password)}>
-        <Text style={styles.buttonText}>Login</Text>
+      <TouchableOpacity style={styles.button} onPress={() =>onSubmit(email, password, isLoading)}>
+        <Text style={styles.buttonText}>
+           {isLoading ? ("Loading...") : ("Login")}
+         </Text>
       </TouchableOpacity>
     </View>
   );

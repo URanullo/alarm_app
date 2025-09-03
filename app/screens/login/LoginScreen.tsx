@@ -4,6 +4,7 @@ import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from "firebase/firestore";
+import { useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -18,16 +19,18 @@ const baseUrl = Constants.expoConfig?.extra?.baseUrl;
  console.log('baseUrl',baseUrl);
 
 export default function LoginScreen() {
-  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async (email: string, password: string) => {
+  const handleLogin = async (email: string, password: string, isLoading: boolean) => {
 
     console.log('Login attempt with:', email, password);
     if (!email || !password) {
       Alert.alert('Error', 'Please enter both email and password');
+      isLoading = false;
       return;
     }
     try {
+      setIsLoading(true);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
@@ -56,20 +59,23 @@ export default function LoginScreen() {
 
     } catch (error) {
       Alert.alert('Login Failed', error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      style={{ flex: 1, backgroundColor: '#fff' }} // Ensure KAV takes full screen and has a background
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // Standard behavior
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} // Adjust if you have a fixed header/footer
     >
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled"
+        keyboardShouldPersistTaps="handled" // Good for forms
+        showsVerticalScrollIndicator={false} // Optional: hide scrollbar
       >
-        <LoginForm onSubmit={handleLogin} />
+        <LoginForm onSubmit={handleLogin} isLoading={isLoading} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
