@@ -34,7 +34,7 @@ export default function ReportEmergencyScreen() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: 'police@gmail.com',
+          email: 'test@gmail.com',
           sound: 'default',
           title: 'Alert! ' + selectedType.toUpperCase() + ' reported',
           body: `\nLocation: ${location}\nDescription: ${description}\nReporter: ${user.displayName || user.email || 'User'}`
