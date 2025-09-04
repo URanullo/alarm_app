@@ -7,7 +7,9 @@ import { useNavigation } from '@react-navigation/native';
 
 
 const baseUrl = Constants.expoConfig?.extra?.baseUrl;
+const adminEmail = Constants.expoConfig?.extra?.adminEmail;
 console.log('baseUrl', baseUrl);
+console.log('adminEmail', adminEmail);
 
 export const unstable_settings = {
   headerShown: false,
@@ -47,9 +49,8 @@ export default function ReportEmergencyScreen() {
     }
 
     setIsLoading(true);
-
     try {
-      const recipientEmail = 'police@gmail.com';
+      const recipientEmail = adminEmail;
       const payload = {
         email: recipientEmail,
         sound: 'default',
@@ -71,6 +72,8 @@ export default function ReportEmergencyScreen() {
         );
         setSelectedType('accident');
         setDescription('');
+        console.log(`Submitted successfully to ${recipientEmail}`);
+
       } else {
         let errorTitle = `Submit Failed (Status: ${response.status})`;
         let errorMessage = 'An unknown error occurred.';
