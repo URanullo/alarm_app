@@ -1,9 +1,11 @@
 import { FontAwesome, FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native'; // Added ActivityIndicator
-import { auth } from './services/firebaseConfig';
-import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
+import Constants from 'expo-constants';
+import type { Auth } from 'firebase/auth';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'; // Added ActivityIndicator
+import getUserLocation from './screens/home/LocationService';
+import * as firebaseSvc from './services/firebaseConfig';
 
 
 const baseUrl = Constants.expoConfig?.extra?.baseUrl;
@@ -15,8 +17,13 @@ export const unstable_settings = {
   headerShown: false,
 };
 
+interface ServerError {
+  error?: string;
+  message?: string;
+}
+
 const EMERGENCY_TYPES = [
-  { key: 'accident', label: 'Accident', icon: <MaterialCommunityIcons name="car-crash" size={28} color="#E53935" /> },
+  { key: 'accident', label: 'Accident', icon: <MaterialCommunityIcons name="car-wash" size={28} color="#E53935" /> },
   { key: 'fire', label: 'Fire', icon: <MaterialCommunityIcons name="fire" size={28} color="#bbb" /> },
   { key: 'medical', label: 'Medical', icon: <FontAwesome5 name="first-aid" size={28} color="#bbb" /> },
   { key: 'flood', label: 'Flood', icon: <MaterialCommunityIcons name="home-flood" size={28} color="#bbb" /> },
@@ -28,11 +35,32 @@ const EMERGENCY_TYPES = [
 
 export default function ReportEmergencyScreen() {
   const [selectedType, setSelectedType] = useState<string>('accident');
-  const [location, setLocation] = useState<string>('Campo, Bacuag, Surigao City');
+  const [location, setLocation] = useState<string>('Fetching location…');
   const [description, setDescription] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const user = auth.currentUser;
+  const authInstance = firebaseSvc.auth as unknown as Auth;
+  const user = authInstance.currentUser;
   const navigation = useNavigation();
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadLocation = async () => {
+      try {
+        const addr = await getUserLocation();
+        if (!isMounted) return;
+        if (addr && addr !== 'Address not available') {
+          setLocation(addr);
+        } else {
+          setLocation('Unable to fetch location');
+        }
+      } catch (e) {
+        console.warn('Failed to load location:', e);
+        if (isMounted) setLocation('Unable to fetch location');
+      }
+    };
+    loadLocation();
+    return () => { isMounted = false; };
+  }, []);
 
  const handleSubmit = async () => {
     if (!user) {
@@ -94,6 +122,7 @@ export default function ReportEmergencyScreen() {
             errorMessage = errorText || 'Server returned a non-JSON error response.';
           }
         } catch (e) {
+          console.warn('Failed to parse error details:', e);
           errorMessage = 'Could not parse error details from server.';
         }
         Alert.alert(errorTitle, errorMessage);

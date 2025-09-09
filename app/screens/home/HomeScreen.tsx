@@ -1,11 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState, useCallback } from 'react';
-import { Dimensions, StyleSheet, Switch, TouchableOpacity,
-    View, Text, ActivityIndicator, Button, Alert, RefreshControl, ScrollView} from 'react-native';
-import { auth, db } from '../../services/firebaseConfig';
-import { doc, getDoc, Timestamp } from 'firebase/firestore';
-import { User, onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, User, type Auth } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator, Button,
+  Dimensions,
+  RefreshControl, ScrollView,
+  StyleSheet, Switch,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import * as firebaseSvc from '../../services/firebaseConfig';
+import { db } from '../../services/firebaseConfig';
 
 export interface UserProfile {
   firstName: string;
@@ -15,7 +23,7 @@ export interface UserProfile {
 export default function HomeScreen() {
   const [isVolunteer, setIsVolunteer] = useState(false);
   const router = useRouter();
-  const user = auth.currentUser;
+  const authInstance = firebaseSvc.auth as unknown as Auth;
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -49,7 +57,7 @@ export default function HomeScreen() {
     };
 
     useEffect(() => {
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
+      const unsubscribe = onAuthStateChanged(authInstance, (user) => {
         if (user) {
           setCurrentUser(user);
           fetchUserProfile(user.uid);
@@ -61,7 +69,7 @@ export default function HomeScreen() {
         }
       });
       return () => unsubscribe();
-    }, []);
+    }, [authInstance]);
 
   // Navigate to report emergency page
     const handleSOS = () => {
@@ -259,10 +267,26 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontWeight: '500',
   },
- centered: {
+  centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f4f6f8',
+  },
+  loadingText: {
+    color: '#222',
+    marginTop: 8,
+  },
+  errorContainer: {
+    backgroundColor: '#fff5f5',
+    borderRadius: 12,
+    margin: 16,
+    padding: 12,
+  },
+  errorText: {
+    color: '#c53030',
+  },
+  infoText: {
+    color: '#666',
   },
 }); 
