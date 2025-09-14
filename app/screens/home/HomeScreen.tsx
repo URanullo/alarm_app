@@ -7,7 +7,7 @@ import {
   ActivityIndicator, Button,
   Dimensions,
   RefreshControl, ScrollView,
-  StyleSheet, Switch,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View
@@ -136,16 +136,7 @@ export default function HomeScreen() {
         {/* Animated ripple effect can be added later for polish */}
       </View>
 
-      {/* Volunteer Toggle */}
-      <View style={styles.volunteerContainer}>
-        <Text style={styles.volunteerText}>Volunteer for help</Text>
-        <Switch
-          value={isVolunteer}
-          onValueChange={setIsVolunteer}
-          trackColor={{ false: '#ccc', true: '#E53935' }}
-          thumbColor={isVolunteer ? '#fff' : '#fff'}
-        />
-      </View>
+      
     </View>
             </ScrollView>
   );

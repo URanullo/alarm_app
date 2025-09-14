@@ -1,7 +1,6 @@
 import Constants from 'expo-constants';
 import * as Device from "expo-device";
 import * as Notifications from 'expo-notifications';
-import { useRouter } from 'expo-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from "firebase/firestore";
 import { useState } from 'react';

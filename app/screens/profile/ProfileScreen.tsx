@@ -1,11 +1,17 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState, useCallback } from 'react';
-import { Dimensions, StyleSheet, Switch, TouchableOpacity,
-    View, Text, ActivityIndicator, Button, Alert, RefreshControl, ScrollView} from 'react-native';
-import { auth, db } from '../../services/firebaseConfig';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
-import { User, onAuthStateChanged } from 'firebase/auth';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Button,
+  RefreshControl, ScrollView,
+  StyleSheet,
+  Text,
+  View
+} from 'react-native';
+import { auth, db } from '../../services/firebaseConfig';
 
 export interface UserProfile {
   uid: string;
