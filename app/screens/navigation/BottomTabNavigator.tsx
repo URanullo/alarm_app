@@ -2,20 +2,42 @@ import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { onAuthStateChanged } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
-import { auth } from '../../services/firebaseConfig';
+import { auth, db } from '../../services/firebaseConfig';
 import HomeScreen from '../home/HomeScreen';
 import LoginScreen from '../login/LoginScreen';
 import ProfileScreen from '../profile/ProfileScreen';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 const Tab = createBottomTabNavigator();
 
 export default function BottomTabNavigator() {
   const [user, setUser] = useState(null);
+  const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, async(firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
+
+        try {
+          const userDocRef = doc(db, "users", firebaseUser.uid);
+          const userDocSnap = await getDoc(userDocRef);
+
+          if (userDocSnap.exists()) {
+            const data = userDocSnap.data();
+            setRole(data.role || "user");
+          } else {
+            setRole(null);
+          }
+        } catch (error) {
+          console.error("Error fetching user role:", error);
+          setRole("admin");
+        }
+      } else {
+        setUser(null);
+        setRole(null);
+      }
       setLoading(false);
     });
     return unsubscribe;
@@ -24,6 +46,10 @@ export default function BottomTabNavigator() {
   if (loading) return null;
 
   if (!user) {
+    return <LoginScreen />;
+  }
+
+  if (role !== "user") {
     return <LoginScreen />;
   }
 
