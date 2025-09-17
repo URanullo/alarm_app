@@ -3,7 +3,7 @@ import * as Device from "expo-device";
 import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useState } from 'react';
 import {
   Alert,
@@ -33,6 +33,19 @@ export default function LoginScreen() {
       setIsLoading(true);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (!userDoc.exists()) {
+        Alert.alert("Error", "User profile not found");
+        return;
+      }
+      const userData = userDoc.data();
+      console.log("User Data:", userData);
+
+      if (userData.role !== "user") {
+        Alert.alert("Access Denied", "You must be user to log in.");
+        return;
+      }
 
       console.log('Login successful');
       // Get push token
