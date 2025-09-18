@@ -1,7 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { initializeApp } from "firebase/app";
-import { browserLocalPersistence, getAuth, getReactNativePersistence, initializeAuth } from "firebase/auth";
+import { getApp, getApps, initializeApp } from "firebase/app";
+import { browserLocalPersistence, getAuth, getReactNativePersistence, initializeAuth, setPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 import { Platform } from 'react-native';
 
 const firebaseConfig = {
@@ -14,18 +15,30 @@ const firebaseConfig = {
   measurementId: "G-6EQPPCT9ZT"
 };
 
-const app = initializeApp(firebaseConfig);
+// Ensure we don't initialize multiple times during HMR or re-imports
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 let auth;
-
 if (Platform.OS === 'web') {
   auth = getAuth(app);
-  auth.setPersistence(browserLocalPersistence);
+  try {
+    setPersistence(auth, browserLocalPersistence);
+  } catch (_) {
+    // ignore persistence errors in non-browser contexts
+  }
 } else {
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage),
-  });
+  try {
+    // If Auth is already initialized for RN, reuse it
+    auth = getAuth(app);
+  } catch (_err) {
+    // Initialize Auth once for React Native
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  }
 }
 
-export { app, auth, db };
+export { app, auth, db, storage };
+
