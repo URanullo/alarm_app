@@ -13,12 +13,15 @@ import {
 } from 'react-native';
 import { app, auth, db } from "../../services/firebaseConfig";
 import LoginForm from './LoginForm';
+import { useUser } from '../../UserContext';
+
 
 const baseUrl = Constants.expoConfig?.extra?.baseUrl;
  console.log('baseUrl',baseUrl);
 
 export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
+  const { setUser } = useUser();
 
   const handleLogin = async (email: string, password: string, isLoading: boolean) => {
 
@@ -46,6 +49,8 @@ export default function LoginScreen() {
         return;
       }
 
+      setUser(userData);
+      console.log("✅ User saved globally:", userData);
       console.log('Login successful');
       // Get push token
       const token = await registerForPushNotificationsAsync();

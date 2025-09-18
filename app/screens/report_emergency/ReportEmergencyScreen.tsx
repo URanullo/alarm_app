@@ -4,8 +4,9 @@ import Constants from 'expo-constants';
 import type { Auth } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'; // Added ActivityIndicator
-import getUserLocation from './screens/home/LocationService';
-import * as firebaseSvc from './services/firebaseConfig';
+import getUserLocation from '../../screens/home/LocationService';
+import * as firebaseSvc from '../../services/firebaseConfig';
+import { useUser } from '../../UserContext';
 
 
 const baseUrl = Constants.expoConfig?.extra?.baseUrl;
@@ -23,14 +24,14 @@ interface ServerError {
 }
 
 const EMERGENCY_TYPES = [
-  { key: 'accident', label: 'Accident', icon: <MaterialCommunityIcons name="car-wash" size={28} color="#E53935" /> },
-  { key: 'fire', label: 'Fire', icon: <MaterialCommunityIcons name="fire" size={28} color="#bbb" /> },
-  { key: 'medical', label: 'Medical', icon: <FontAwesome5 name="first-aid" size={28} color="#bbb" /> },
-  { key: 'flood', label: 'Flood', icon: <MaterialCommunityIcons name="home-flood" size={28} color="#bbb" /> },
-  { key: 'quake', label: 'Quake', icon: <MaterialCommunityIcons name="home-lightning-bolt-outline" size={28} color="#bbb" /> },
-  { key: 'robbery', label: 'Robbery', icon: <FontAwesome5 name="user-secret" size={28} color="#bbb" /> },
-  { key: 'assault', label: 'Assault', icon: <FontAwesome5 name="hand-rock" size={28} color="#bbb" /> },
-  { key: 'other', label: 'Other', icon: <FontAwesome name="ellipsis-h" size={28} color="#bbb" /> },
+    { key: 'accident', label: 'Accident', priority: 'High', icon: <MaterialCommunityIcons name="car-wash" size={28} color="#E53935" /> },
+    { key: 'fire', label: 'Fire', priority: 'Critical', icon: <MaterialCommunityIcons name="fire" size={28} color="#bbb" /> },
+    { key: 'medical', label: 'Medical', priority: 'Critical', icon: <FontAwesome5 name="first-aid" size={28} color="#bbb" /> },
+    { key: 'flood', label: 'Flood', priority: 'High', icon: <MaterialCommunityIcons name="home-flood" size={28} color="#bbb" /> },
+    { key: 'quake', label: 'Quake', priority: 'Critical', icon: <MaterialCommunityIcons name="home-lightning-bolt-outline" size={28} color="#bbb" /> },
+    { key: 'robbery', label: 'Robbery', priority: 'High', icon: <FontAwesome5 name="user-secret" size={28} color="#bbb" /> },
+    { key: 'assault', label: 'Assault', priority: 'High', icon: <FontAwesome5 name="hand-rock" size={28} color="#bbb" /> },
+    { key: 'other', label: 'Other', priority: 'Low', icon: <FontAwesome name="ellipsis-h" size={28} color="#bbb" /> },
 ];
 
 export default function ReportEmergencyScreen() {
@@ -39,8 +40,8 @@ export default function ReportEmergencyScreen() {
   const [description, setDescription] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const authInstance = firebaseSvc.auth as unknown as Auth;
-  const user = authInstance.currentUser;
   const navigation = useNavigation();
+  const { user } = useUser();
 
   useEffect(() => {
     let isMounted = true;
@@ -79,13 +80,28 @@ export default function ReportEmergencyScreen() {
     setIsLoading(true);
     try {
       const recipientEmail = adminEmail;
+      const now = new Date().toISOString();
+      const selectedEmergency = EMERGENCY_TYPES.find(e => e.key === selectedType);
+      const priority = selectedEmergency?.priority || "Medium";
+
       const payload = {
         email: recipientEmail,
-        sound: 'default',
         title: `Alert! ${selectedType.toUpperCase()} reported`,
-        body: `\nLocation: ${location}\nDescription: ${description}\nReporter: ${user.displayName || user.email || 'User'}`
+        body: `Emergency at ${location}`,
+        sound: "default",
+        data: {
+          type: selectedType.toUpperCase(),
+          description: description,
+          location: location,
+          barangay: user.barangay || "Not set",
+          reportedBy: `${user.firstName} ${user.lastName}` || user.email,
+          reporterContactNumber: user.contactNumber || "N/A",
+          priority,
+          clientDateTime: now,
+        }
       };
 
+      console.log('payload', payload);
       const response = await fetch(`${baseUrl}/send-to-user`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

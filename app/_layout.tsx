@@ -2,7 +2,8 @@ import * as Notifications from 'expo-notifications';
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { Alert, Platform } from 'react-native';
-import { app } from './services/firebaseConfig'; // Use the correct path
+import { app } from './services/firebaseConfig';
+import { UserProvider } from './UserContext';
 
 let getMessaging, onMessage;
 if (Platform.OS === 'web') {
@@ -39,5 +40,9 @@ export default function RootLayout() {
     };
   }, []);
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <UserProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </UserProvider>
+  );
 }
