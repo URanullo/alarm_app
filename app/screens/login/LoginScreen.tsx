@@ -70,7 +70,8 @@ export default function LoginScreen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: userCredential.user.email,
-          token: token
+          token: token,
+          role: userData.role
         })
       });
 

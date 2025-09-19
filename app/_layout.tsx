@@ -1,3 +1,4 @@
+import { Audio } from 'expo-av';
 import * as Notifications from 'expo-notifications';
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
@@ -6,34 +7,37 @@ import { app } from './services/firebaseConfig';
 import { UserProvider } from './UserContext';
 
 let getMessaging, onMessage;
-if (Platform.OS === 'web') {
-  // Dynamically import only on web to avoid native errors
-  ({ getMessaging, onMessage } = require('firebase/messaging'));
-}
 
 export default function RootLayout() {
   useEffect(() => {
-    let subscription: Notifications.EventSubscription;
+   (async () => {
+     await Notifications.setNotificationChannelAsync('critical', {
+      name: 'Critical Alerts',
+      importance: Notifications.AndroidImportance.MAX,
+      sound: 'default',
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FF231F7C',
+      vibrationPattern: [0, 500, 500, 500],
+      lightColor: '#FF0000',
+      bypassDnd: true,
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+     });
+    })();
 
-    if (Platform.OS === 'web') {
-      const messaging = getMessaging(app);
-      onMessage(messaging, (payload) => {
-        console.log('💻 Web notification received:', payload);
-        Alert.alert(
-          payload.notification?.title || 'Notification',
-          payload.notification?.body || ''
+    let subscription: Notifications.EventSubscription;
+    subscription = Notifications.addNotificationReceivedListener(notification => {
+    console.log('📱 Mobile notification received:', notification);
+    Alert.alert(
+      notification.request.content.title || 'Notification',
+      notification.request.content.body || ''
+    );
+   (async () => {
+        const { sound } = await Audio.Sound.createAsync(
+          require('./assets/notify.mp3')
         );
-      });
-    } else {
-      // 📱 Mobile push listener
-      subscription = Notifications.addNotificationReceivedListener(notification => {
-        console.log('📱 Mobile notification received:', notification);
-        Alert.alert(
-          notification.request.content.title || 'Notification',
-          notification.request.content.body || ''
-        );
-      });
-    }
+        await sound.playAsync();
+    })();
+    });
 
     return () => {
       if (subscription) subscription.remove?.();
