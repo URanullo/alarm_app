@@ -7,9 +7,7 @@ import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform,
 import getUserLocation from '../../screens/home/LocationService';
 import { useUser } from '../../UserContext';
 const baseUrl = Constants.expoConfig?.extra?.baseUrl;
-const adminEmail = Constants.expoConfig?.extra?.adminEmail;
 console.log('baseUrl', baseUrl);
-console.log('adminEmail', adminEmail);
 
 export const unstable_settings = {
   headerShown: false,
@@ -82,13 +80,11 @@ export default function ReportEmergencyScreen() {
 
     setIsLoading(true);
     try {
-      const recipientEmail = adminEmail;
       const now = new Date().toISOString();
       const selectedEmergency = EMERGENCY_TYPES.find(e => e.key === selectedType);
       const priority = selectedEmergency?.priority || "Medium";
 
       const payload = {
-        email: recipientEmail,
         title: `Alert! ${selectedType.toUpperCase()} reported`,
         body: `Emergency at ${location}`,
         sound: "default",
@@ -105,7 +101,7 @@ export default function ReportEmergencyScreen() {
       };
 
       console.log('payload', payload);
-      const response = await fetch(`${baseUrl}/send-to-user`, {
+      const response = await fetch(`${baseUrl}/send-to-admins`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -119,7 +115,7 @@ export default function ReportEmergencyScreen() {
         );
         setSelectedType('accident');
         setDescription('');
-        console.log(`Submitted successfully to ${recipientEmail}`);
+        console.log(`Submitted successfully`);
 
       } else {
         let errorTitle = `Submit Failed (Status: ${response.status})`;

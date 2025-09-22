@@ -10,7 +10,6 @@
     "newArchEnabled": true,
     "extra": {
       "baseUrl": "https://firebase-admin-auth-234s.onrender.com",
-      "adminEmail": "mdrrmo@gmail.com",
       "eas": {
         "projectId": "a37f2310-e046-4d8f-a929-828e378753b0"
       }
