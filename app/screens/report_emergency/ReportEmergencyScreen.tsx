@@ -6,6 +6,10 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import getUserLocation from '../../screens/home/LocationService';
 import { useUser } from '../../UserContext';
+import { storage } from '../../services/firebaseConfig';
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import * as ImageManipulator from "expo-image-manipulator";
+
 const baseUrl = Constants.expoConfig?.extra?.baseUrl;
 console.log('baseUrl', baseUrl);
 
@@ -29,6 +33,24 @@ const EMERGENCY_TYPES = [
     { key: 'other', label: 'Other', priority: 'Low', color: '#607D8B', icon: 'ellipsis-h' },
 ];
 
+async function uploadImagesAndGetUrls(images: string[]) {
+  const urls: string[] = [];
+
+  for (const uri of images) {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+
+    // unique filename
+    const filename = `reports/${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const storageRef = ref(storage, filename);
+
+    await uploadBytes(storageRef, blob);
+    const downloadURL = await getDownloadURL(storageRef);
+
+    urls.push(downloadURL);
+  }
+  return urls;
+}
 
 export default function ReportEmergencyScreen() {
   const [selectedType, setSelectedType] = useState<string>('accident');
@@ -84,6 +106,8 @@ export default function ReportEmergencyScreen() {
       const selectedEmergency = EMERGENCY_TYPES.find(e => e.key === selectedType);
       const priority = selectedEmergency?.priority || "Medium";
 
+      const uploadedUrls = await uploadImagesAndGetUrls(attachedImages);
+
       const payload = {
         title: `Alert! ${selectedType.toUpperCase()} reported`,
         body: `Emergency at ${location}`,
@@ -97,6 +121,7 @@ export default function ReportEmergencyScreen() {
           reporterContactNumber: user.contactNumber || "N/A",
           priority,
           clientDateTime: now,
+          images: uploadedUrls,
         }
       };
 
@@ -173,15 +198,22 @@ export default function ReportEmergencyScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.7,
+      quality: 1,
       allowsMultipleSelection: true,
     });
 
     if (!result.canceled && result.assets) {
-      const newImages = result.assets.map(asset => asset.uri);
-      setAttachedImages(prev => [...prev, ...newImages].slice(0, 3)); // Max 3 images
+      const compressedImages: string[] = [];
+        for (const asset of result.assets) {
+          const manipulated = await ImageManipulator.manipulateAsync(
+            asset.uri,
+            [{ resize: { width: 800 } }],
+            { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG } // 60% quality
+          );
+          compressedImages.push(manipulated.uri);
+        }
+      setAttachedImages(prev => [...prev, ...compressedImages].slice(0, 2)); // max 2 images
     }
   };
 
