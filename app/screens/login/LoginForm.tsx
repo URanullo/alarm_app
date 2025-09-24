@@ -12,7 +12,7 @@ export default function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
 
   return (
     <View style={styles.formWrapper}>
-      <Text style={styles.title}>Login</Text>
+      <Text style={styles.title}>Login User</Text>
 
       <Text style={styles.label}>Email</Text>
       <TextInput
