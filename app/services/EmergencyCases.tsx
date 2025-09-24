@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { getAuth } from 'firebase/auth';
-import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
@@ -56,13 +55,11 @@ export default function EmergencyCasesScreen() {
   }, [width]);
 
   useEffect(() => {
-    const currentUserId = getAuth().currentUser?.uid;
     const baseQuery = query(
-      collection(db, 'emergencies'),
-      orderBy('receivedAt', 'desc')
+      collection(db, 'EmergencyCases'),
+      orderBy('createdAt', 'desc')
     );
-    const q = currentUserId ? query(baseQuery, where('userId', '==', currentUserId)) : baseQuery;
-    const unsub = onSnapshot(q, (snap) => {
+    const unsub = onSnapshot(baseQuery, (snap) => {
       const items: Emergency[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
       setEmergencies(items);
       setLoading(false);
@@ -84,19 +81,19 @@ export default function EmergencyCasesScreen() {
         <View style={styles.headerRow}>
           <View style={styles.typeBadge}>
             <Ionicons name="warning" size={16} color="#fff" />
-            <Text style={styles.typeText}>{item.type || 'ALERT'}</Text>
+            <Text style={styles.typeText}>{(item as any).alarmType || 'ALERT'}</Text>
           </View>
           <View style={[styles.statusPill, 
             item.status === 'Resolved' ? styles.statusResolved :
             item.status === 'Responded' ? styles.statusResponded :
             styles.statusPending
           ]}>
-            <Text style={styles.statusText}>{item.status || 'Pending'}</Text>
+            <Text style={styles.statusText}>{(item as any).alarmLevel || 'Medium'}</Text>
           </View>
         </View>
 
-        <Text style={styles.titleText} numberOfLines={2}>{item.title || 'Emergency Alert'}</Text>
-        {item.body ? <Text style={styles.bodyText} numberOfLines={3}>{item.body}</Text> : null}
+        <Text style={styles.titleText} numberOfLines={2}>Emergency Alert</Text>
+        {((item as any).message) ? <Text style={styles.bodyText} numberOfLines={3}>{(item as any).message}</Text> : null}
 
         <View style={styles.metaRow}>
           <View style={styles.avatar}>
@@ -129,7 +126,7 @@ export default function EmergencyCasesScreen() {
 
         <View style={styles.footerRow}>
           <View style={styles.priorityBadge}>
-            <Text style={styles.priorityText}>{item.priority || 'Medium'}</Text>
+            <Text style={styles.priorityText}>{(item as any).alarmLevel || 'Medium'}</Text>
           </View>
           <TouchableOpacity style={styles.ctaBtn} activeOpacity={0.8}>
             <Ionicons name="open-outline" size={16} color="#fff" />

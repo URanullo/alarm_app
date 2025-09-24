@@ -1,7 +1,6 @@
 import { Audio } from 'expo-av';
 import * as Notifications from 'expo-notifications';
 import { Stack } from 'expo-router';
-import { getAuth } from 'firebase/auth';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useEffect } from 'react';
 import { Alert } from 'react-native';
@@ -38,24 +37,15 @@ export default function RootLayout() {
         await sound.playAsync();
     })();
     try {
-      const currentUser = getAuth().currentUser;
       const content = notification?.request?.content;
       const data: any = content?.data || {};
 
-      // Persist emergency/alarm to Firestore
-      await addDoc(collection(db, 'emergencies'), {
-        userId: currentUser?.uid || null,
-        userEmail: currentUser?.email || null,
-        title: content?.title || null,
-        body: content?.body || null,
-        type: data?.type || data?.category || 'ALERT',
-        description: data?.description || null,
-        location: data?.location || null,
-        priority: data?.priority || null,
-        images: Array.isArray(data?.images) ? data.images : [],
-        status: data?.status || 'Pending',
-        source: 'admin',
-        receivedAt: serverTimestamp(),
+      // Persist minimal emergency record to Firestore → EmergencyCases collection
+      await addDoc(collection(db, 'EmergencyCases'), {
+        alarmType: data?.type || data?.category || 'ALERT',
+        alarmLevel: data?.priority || data?.level || 'Medium',
+        message: content?.body || data?.message || '',
+        createdAt: serverTimestamp(),
       });
     } catch (err) {
       console.warn('Failed to save emergency:', err);
