@@ -1,9 +1,11 @@
 import { Audio } from 'expo-av';
 import * as Notifications from 'expo-notifications';
 import { Stack } from 'expo-router';
+import { getAuth } from 'firebase/auth';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useEffect } from 'react';
-import { Alert, Platform } from 'react-native';
-import { app } from './services/firebaseConfig';
+import { Alert } from 'react-native';
+import { db } from './services/firebaseConfig';
 import { UserProvider } from './UserContext';
 
 let getMessaging, onMessage;
@@ -15,17 +17,15 @@ export default function RootLayout() {
       name: 'Critical Alerts',
       importance: Notifications.AndroidImportance.MAX,
       sound: 'default',
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF231F7C',
       vibrationPattern: [0, 500, 500, 500],
-      lightColor: '#FF0000',
+      lightColor: '#FF231F7C',
       bypassDnd: true,
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
      });
     })();
 
     let subscription: Notifications.EventSubscription;
-    subscription = Notifications.addNotificationReceivedListener(notification => {
+    subscription = Notifications.addNotificationReceivedListener(async (notification) => {
     console.log('📱 Mobile notification received:', notification);
     Alert.alert(
       notification.request.content.title || 'Notification',
@@ -37,6 +37,29 @@ export default function RootLayout() {
         );
         await sound.playAsync();
     })();
+    try {
+      const currentUser = getAuth().currentUser;
+      const content = notification?.request?.content;
+      const data: any = content?.data || {};
+
+      // Persist emergency/alarm to Firestore
+      await addDoc(collection(db, 'emergencies'), {
+        userId: currentUser?.uid || null,
+        userEmail: currentUser?.email || null,
+        title: content?.title || null,
+        body: content?.body || null,
+        type: data?.type || data?.category || 'ALERT',
+        description: data?.description || null,
+        location: data?.location || null,
+        priority: data?.priority || null,
+        images: Array.isArray(data?.images) ? data.images : [],
+        status: data?.status || 'Pending',
+        source: 'admin',
+        receivedAt: serverTimestamp(),
+      });
+    } catch (err) {
+      console.warn('Failed to save emergency:', err);
+    }
     });
 
     return () => {
