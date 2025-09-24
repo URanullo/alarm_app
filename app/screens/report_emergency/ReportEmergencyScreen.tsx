@@ -1,14 +1,14 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Constants from 'expo-constants';
+import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from 'expo-image-picker';
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import getUserLocation from '../../screens/home/LocationService';
-import { useUser } from '../../UserContext';
 import { storage } from '../../services/firebaseConfig';
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import * as ImageManipulator from "expo-image-manipulator";
+import { useUser } from '../../UserContext';
 
 const baseUrl = Constants.expoConfig?.extra?.baseUrl;
 console.log('baseUrl', baseUrl);
@@ -112,6 +112,7 @@ export default function ReportEmergencyScreen() {
         title: `Alert! ${selectedType.toUpperCase()} reported`,
         body: `Emergency at ${location}`,
         sound: "default",
+        attachments: uploadedUrls, // duplicate images for admin convenience
         data: {
           type: selectedType.toUpperCase(),
           description: description,
