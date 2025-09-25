@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -9,6 +10,7 @@ type LoginFormProps = {
 export default function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <View style={styles.formWrapper}>
@@ -26,19 +28,34 @@ export default function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
       />
 
       <Text style={styles.label}>Password</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        placeholderTextColor="#bbb"
-      />
+      <View style={styles.passwordWrapper}>
+        <TextInput
+          style={[styles.input, { flex: 1, paddingRight: 40 }]}
+          placeholder="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+          placeholderTextColor="#bbb"
+        />
+        <TouchableOpacity
+          onPress={() => setShowPassword(!showPassword)}
+          style={styles.iconWrapper}
+        >
+          <Ionicons
+            name={showPassword ? 'eye-off' : 'eye'}
+            size={22}
+            color="#E53935"
+          />
+        </TouchableOpacity>
+      </View>
 
-      <TouchableOpacity style={styles.button} onPress={() =>onSubmit(email, password, isLoading)}>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => onSubmit(email, password, isLoading)}
+      >
         <Text style={styles.buttonText}>
-           {isLoading ? ("Loading...") : ("Login")}
-         </Text>
+          {isLoading ? 'Loading...' : 'Login'}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -46,18 +63,32 @@ export default function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
 
 const styles = StyleSheet.create({
   formWrapper: { width: '100%' },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#E53935', marginBottom: 24, textAlign: 'center' },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#E53935',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
   label: { fontSize: 14, color: '#222', marginBottom: 6, marginTop: 12 },
   input: {
     borderColor: '#ddd',
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 10,
-    marginBottom: 8,
     backgroundColor: '#fafafa',
     height: 48,
     fontSize: 15,
     color: '#222',
+  },
+  passwordWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconWrapper: {
+    position: 'absolute',
+    right: 10,
+    padding: 6,
   },
   button: {
     backgroundColor: '#E53935',

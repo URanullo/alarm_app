@@ -1,10 +1,8 @@
 import { Audio } from 'expo-av';
 import * as Notifications from 'expo-notifications';
 import { Stack } from 'expo-router';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useEffect } from 'react';
 import { Alert } from 'react-native';
-import { db } from './services/firebaseConfig';
 import { UserProvider } from './UserContext';
 
 let getMessaging, onMessage;
@@ -36,20 +34,7 @@ export default function RootLayout() {
         );
         await sound.playAsync();
     })();
-    try {
-      const content = notification?.request?.content;
-      const data: any = content?.data || {};
-
-      // Persist minimal emergency record to Firestore → EmergencyCases collection
-      await addDoc(collection(db, 'EmergencyCases'), {
-        alarmType: data?.type || data?.category || 'ALERT',
-        alarmLevel: data?.priority || data?.level || 'Medium',
-        message: content?.body || data?.message || '',
-        createdAt: serverTimestamp(),
-      });
-    } catch (err) {
-      console.warn('Failed to save emergency:', err);
-    }
+    // Read-only app: do not write to Firestore here. Admin/backend owns persistence.
     });
 
     return () => {
