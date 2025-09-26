@@ -9,22 +9,17 @@ import ProfileScreen from '../profile/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
-// BottomTabNavigator.tsx
 function Tabs() {
-  const { user } = useUser(); // ✅ use global context only
+  const { user } = useUser();
   const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
-      setRole(user.role || "user"); // ✅ use Firestore userData from context
+      setRole(user.role || "user");
     } else {
       setRole(null);
     }
   }, [user]);
-
-  if (!user) {
-    return <LoginScreen />;
-  }
 
   if (role !== "user") {
     return <LoginScreen />;
