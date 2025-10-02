@@ -23,39 +23,61 @@ export default function ProfileScreen() {
 
   const displayName = useMemo(() => {
     if (!user) return 'Guest';
-    const anyUser: any = user as any;
-    if (anyUser.firstName || anyUser.lastName) {
-      return `${anyUser.firstName || ''} ${anyUser.lastName || ''}`.trim();
+    try {
+      const anyUser: any = user as any;
+      if (anyUser?.firstName || anyUser?.lastName) {
+        return `${anyUser.firstName || ''} ${anyUser.lastName || ''}`.trim();
+      }
+      return (anyUser?.displayName || anyUser?.email || 'User') as string;
+    } catch {
+      return 'User';
     }
-    return (anyUser.displayName || anyUser.email || 'User') as string;
   }, [user]);
 
   const emailOrId = useMemo(() => {
     if (!user) return '';
-    const anyUser: any = user as any;
-    return (anyUser.email || anyUser.uid || '') as string;
+    try {
+      const anyUser: any = user as any;
+      return (anyUser?.email || anyUser?.uid || '') as string;
+    } catch {
+      return '';
+    }
   }, [user]);
 
   const avatarUri = useMemo(() => {
-    const anyUser: any = user as any;
-    return (anyUser.photoURL || anyUser.profilePhotoUrl || '') as string;
+    if (!user) return '';
+    try {
+      const anyUser: any = user as any;
+      return (anyUser?.photoURL || anyUser?.profilePhotoUrl || '') as string;
+    } catch {
+      return '';
+    }
   }, [user]);
 
   const initials = useMemo(() => {
-    const parts = displayName.split(' ').filter(Boolean);
-    const letters = parts.slice(0, 2).map(p => p[0]?.toUpperCase()).join('');
-    return letters || 'U';
+    try {
+      const parts = displayName.split(' ').filter(Boolean);
+      const letters = parts.slice(0, 2).map(p => p[0]?.toUpperCase()).join('');
+      return letters || 'U';
+    } catch {
+      return 'U';
+    }
   }, [displayName]);
 
   const memberSince = useMemo(() => {
-    const anyUser: any = user as any;
-    if (anyUser?.createdAt?.seconds) {
-      return new Date(anyUser.createdAt.seconds * 1000).toLocaleDateString();
+    if (!user) return undefined;
+    try {
+      const anyUser: any = user as any;
+      if (anyUser?.createdAt?.seconds) {
+        return new Date(anyUser.createdAt.seconds * 1000).toLocaleDateString();
+      }
+      if (anyUser?.metadata?.creationTime) {
+        return new Date(anyUser.metadata.creationTime).toLocaleDateString();
+      }
+      return undefined;
+    } catch {
+      return undefined;
     }
-    if (anyUser?.metadata?.creationTime) {
-      return new Date(anyUser.metadata.creationTime).toLocaleDateString();
-    }
-    return undefined;
   }, [user]);
 
   const handleLogout = async () => {
@@ -100,13 +122,21 @@ export default function ProfileScreen() {
         const blob = await response.blob();
 
         // Create a storage ref and upload
-        const uid = (user as any)?.uid || auth.currentUser?.uid || 'unknown-user';
+        const uid = (() => {
+          try {
+            return (user as any)?.uid || auth.currentUser?.uid || 'unknown-user';
+          } catch {
+            return auth.currentUser?.uid || 'unknown-user';
+          }
+        })();
         const imageRef = ref(storage, `profilePhotos/${uid}.jpg`);
         await uploadBytes(imageRef, blob, { contentType: 'image/jpeg' });
 
         // Get a download URL and update auth profile
         const downloadURL = await getDownloadURL(imageRef);
-        await updateProfile(auth.currentUser!, { photoURL: downloadURL });
+        if (auth.currentUser) {
+          await updateProfile(auth.currentUser, { photoURL: downloadURL });
+        }
 
         Alert.alert("Profile Updated", "Your profile picture has been updated.");
       } catch (err: any) {
@@ -150,12 +180,28 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>Details</Text>
           <View style={styles.rowItem}>
             <Text style={styles.rowLabel}>Contact No</Text>
-            <Text style={styles.rowValue}>{(user as any)?.contactNumber || 'Not provided'}</Text>
+            <Text style={styles.rowValue}>
+              {(() => {
+                try {
+                  return (user as any)?.contactNumber || 'Not provided';
+                } catch {
+                  return 'Not provided';
+                }
+              })()}
+            </Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.rowItem}>
             <Text style={styles.rowLabel}>Barangay</Text>
-            <Text style={styles.rowValue}>{(user as any)?.barangay || 'Not set'}</Text>
+            <Text style={styles.rowValue}>
+              {(() => {
+                try {
+                  return (user as any)?.barangay || 'Not set';
+                } catch {
+                  return 'Not set';
+                }
+              })()}
+            </Text>
           </View>
         </View>
       ) : (

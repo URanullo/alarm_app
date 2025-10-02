@@ -18,7 +18,7 @@ export default function HomeScreen() {
 console.log('user',user);
   // Navigate to report emergency page
   const handleSOS = () => {
-    router.push('screens/report_emergency/ReportEmergencyScreen');
+    router.push('/screens/report_emergency/ReportEmergencyScreen');
   };
 
   return (
@@ -29,7 +29,19 @@ console.log('user',user);
           {user ? (
             <View>
               <Text style={styles.hey}>Hey!</Text>
-              <Text style={styles.username}>{user.firstName} {user.lastName}</Text>
+              <Text style={styles.username}>
+                {(() => {
+                  try {
+                    const anyUser = user as any;
+                    if (anyUser?.firstName && anyUser?.lastName) {
+                      return `${anyUser.firstName} ${anyUser.lastName}`;
+                    }
+                    return anyUser?.email || anyUser?.displayName || 'User';
+                  } catch {
+                    return 'User';
+                  }
+                })()}
+              </Text>
             </View>
           ) : (
             <Text style={styles.infoText}>

@@ -3,35 +3,35 @@ import { useRouter } from 'expo-router';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    RefreshControl,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View
+  ActivityIndicator,
+  FlatList,
+  Image,
+  RefreshControl,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View
 } from 'react-native';
-import { useUser } from '../UserContext';
 import { db } from './firebaseConfig';
 
-type Emergency = {
+type AdminAlarm = {
   id: string;
-  userId?: string | null;
-  userEmail?: string | null;
-  title?: string | null;
-  body?: string | null;
-  type: string;
-  description?: string | null;
-  location?: string | null;
-  priority?: string | null;
+  title: string;
+  message: string;
+  alarmType: string;
+  alarmLevel: 'Low' | 'Medium' | 'High' | 'Critical';
+  location?: string;
   images?: string[];
-  status?: 'Pending' | 'Responded' | 'Resolved' | string;
-  receivedAt?: { seconds: number; nanoseconds: number } | null;
-  reportedAt?: { seconds: number; nanoseconds: number } | null;
-  reporter?: { name?: string; photoURL?: string } | null;
+  status: 'Active' | 'Acknowledged' | 'Resolved';
+  sentBy: string; // Admin name
+  sentAt: { seconds: number; nanoseconds: number };
+  expiresAt?: { seconds: number; nanoseconds: number };
+  targetAudience?: 'All' | 'Specific' | 'Barangay';
+  targetBarangays?: string[];
+  isUrgent: boolean;
+  instructions?: string;
 };
 
 function formatTimestamp(ts?: { seconds: number; nanoseconds: number } | null) {
@@ -43,10 +43,9 @@ function formatTimestamp(ts?: { seconds: number; nanoseconds: number } | null) {
 export default function EmergencyCasesScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const { user } = useUser();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [emergencies, setEmergencies] = useState<Emergency[]>([]);
+  const [adminAlarms, setAdminAlarms] = useState<AdminAlarm[]>([]);
 
   const numColumns = useMemo(() => {
     if (width >= 1000) return 3;
@@ -55,13 +54,14 @@ export default function EmergencyCasesScreen() {
   }, [width]);
 
   useEffect(() => {
+    // Read from AdminAlarms collection instead of EmergencyCases
     const baseQuery = query(
-      collection(db, 'EmergencyCases'),
-      orderBy('createdAt', 'desc')
+      collection(db, 'AdminAlarms'),
+      orderBy('sentAt', 'desc')
     );
     const unsub = onSnapshot(baseQuery, (snap) => {
-      const items: Emergency[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
-      setEmergencies(items);
+      const items: AdminAlarm[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+      setAdminAlarms(items);
       setLoading(false);
       setRefreshing(false);
     }, (_err) => {
@@ -75,37 +75,48 @@ export default function EmergencyCasesScreen() {
     setRefreshing(true);
   };
 
-  const renderCard = ({ item }: { item: Emergency }) => {
+  const renderCard = ({ item }: { item: AdminAlarm }) => {
+    const getAlarmLevelColor = (level: string) => {
+      switch (level) {
+        case 'Critical': return '#dc2626';
+        case 'High': return '#ea580c';
+        case 'Medium': return '#d97706';
+        case 'Low': return '#16a34a';
+        default: return '#6b7280';
+      }
+    };
+
+    const getStatusColor = (status: string) => {
+      switch (status) {
+        case 'Active': return '#fde68a';
+        case 'Acknowledged': return '#bfdbfe';
+        case 'Resolved': return '#bbf7d0';
+        default: return '#f3f4f6';
+      }
+    };
+
     return (
       <View style={[styles.card, { flex: 1 / numColumns }]}> 
         <View style={styles.headerRow}>
-          <View style={styles.typeBadge}>
-            <Ionicons name="warning" size={16} color="#fff" />
-            <Text style={styles.typeText}>{(item as any).alarmType || 'ALERT'}</Text>
+          <View style={[styles.typeBadge, { backgroundColor: getAlarmLevelColor(item.alarmLevel) }]}>
+            <Ionicons name="megaphone" size={16} color="#fff" />
+            <Text style={styles.typeText}>{item.alarmType}</Text>
           </View>
-          <View style={[styles.statusPill, 
-            item.status === 'Resolved' ? styles.statusResolved :
-            item.status === 'Responded' ? styles.statusResponded :
-            styles.statusPending
-          ]}>
-            <Text style={styles.statusText}>{(item as any).alarmLevel || 'Medium'}</Text>
+          <View style={[styles.statusPill, { backgroundColor: getStatusColor(item.status) }]}>
+            <Text style={styles.statusText}>{item.status}</Text>
           </View>
         </View>
 
-        <Text style={styles.titleText} numberOfLines={2}>Emergency Alert</Text>
-        {((item as any).message) ? <Text style={styles.bodyText} numberOfLines={3}>{(item as any).message}</Text> : null}
+        <Text style={styles.titleText} numberOfLines={2}>{item.title}</Text>
+        <Text style={styles.bodyText} numberOfLines={3}>{item.message}</Text>
 
         <View style={styles.metaRow}>
           <View style={styles.avatar}>
-            {item.reporter?.photoURL ? (
-              <Image source={{ uri: item.reporter.photoURL }} style={styles.avatarImg} />
-            ) : (
-              <Ionicons name="person-circle" size={28} color="#9aa3af" />
-            )}
+            <Ionicons name="shield-checkmark" size={28} color="#059669" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.reporterName} numberOfLines={1}>{item.reporter?.name || item.userEmail || 'Unknown Reporter'}</Text>
-            <Text style={styles.dateText}>{formatTimestamp(item.receivedAt || item.reportedAt)}</Text>
+            <Text style={styles.reporterName} numberOfLines={1}>Admin: {item.sentBy}</Text>
+            <Text style={styles.dateText}>{formatTimestamp(item.sentAt)}</Text>
           </View>
         </View>
 
@@ -124,13 +135,20 @@ export default function EmergencyCasesScreen() {
           </View>
         ) : null}
 
-        <View style={styles.footerRow}>
-          <View style={styles.priorityBadge}>
-            <Text style={styles.priorityText}>{(item as any).alarmLevel || 'Medium'}</Text>
+        {item.instructions ? (
+          <View style={styles.instructionsRow}>
+            <Ionicons name="information-circle" size={16} color="#6b7280" />
+            <Text style={styles.instructionsText} numberOfLines={2}>{item.instructions}</Text>
           </View>
-          <TouchableOpacity style={styles.ctaBtn} activeOpacity={0.8}>
+        ) : null}
+
+        <View style={styles.footerRow}>
+          <View style={[styles.priorityBadge, { backgroundColor: getAlarmLevelColor(item.alarmLevel) }]}>
+            <Text style={[styles.priorityText, { color: '#fff' }]}>{item.alarmLevel}</Text>
+          </View>
+          <TouchableOpacity style={[styles.ctaBtn, item.isUrgent && styles.urgentBtn]} activeOpacity={0.8}>
             <Ionicons name="open-outline" size={16} color="#fff" />
-            <Text style={styles.ctaText}>View Details</Text>
+            <Text style={styles.ctaText}>{item.isUrgent ? 'URGENT' : 'View Details'}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -143,7 +161,7 @@ export default function EmergencyCasesScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={22} color="#111827" />
         </TouchableOpacity>
-        <Text style={styles.screenTitle}>Emergency Cases</Text>
+        <Text style={styles.screenTitle}>Admin Alarms</Text>
         <View style={{ width: 32 }} />
       </View>
       {loading ? (
@@ -152,7 +170,7 @@ export default function EmergencyCasesScreen() {
         </View>
       ) : (
         <FlatList
-          data={emergencies}
+          data={adminAlarms}
           key={numColumns}
           keyExtractor={(item) => item.id}
           numColumns={numColumns}
@@ -160,7 +178,7 @@ export default function EmergencyCasesScreen() {
           contentContainerStyle={styles.listContent}
           renderItem={renderCard}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={<Text style={styles.bodyText}>No emergencies yet.</Text>}
+          ListEmptyComponent={<Text style={styles.bodyText}>No admin alarms yet.</Text>}
         />
       )}
     </SafeAreaView>
@@ -336,6 +354,21 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 13,
     fontWeight: '700'
+  },
+  instructionsRow: {
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6
+  },
+  instructionsText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#374151',
+    fontStyle: 'italic'
+  },
+  urgentBtn: {
+    backgroundColor: '#dc2626'
   }
 });
 
