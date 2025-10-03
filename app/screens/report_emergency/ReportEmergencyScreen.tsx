@@ -3,23 +3,15 @@ import { useNavigation } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from 'expo-image-picker';
-import { addDoc, collection } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import getUserLocation from '../../screens/home/LocationService';
-import { db, storage } from '../../services/firebaseConfig';
+import { storage } from '../../services/firebaseConfig';
 import { useUser } from '../../UserContext';
 
 const baseUrl = Constants.expoConfig?.extra?.baseUrl;
 console.log('baseUrl', baseUrl);
-
-// Add debug logging for configuration
-if (!baseUrl) {
-  console.error('❌ CRITICAL: baseUrl is not configured in app.json');
-} else {
-  console.log('✅ baseUrl configured:', baseUrl);
-}
 
 export const unstable_settings = {
   headerShown: false,
@@ -128,69 +120,34 @@ export default function ReportEmergencyScreen() {
           type: selectedType.toUpperCase(),
           description: description,
           location: location,
-          barangay: (user as any)?.barangay || "Not set",
-          reportedBy: (() => {
-            try {
-              const anyUser = user as any;
-              if (anyUser?.firstName && anyUser?.lastName) {
-                return `${anyUser.firstName} ${anyUser.lastName}`;
-              }
-              return anyUser?.email || anyUser?.displayName || 'Unknown User';
-            } catch {
-              return 'Unknown User';
-            }
-          })(),
-          reporterContactNumber: (user as any)?.contactNumber || "N/A",
+          barangay: user.barangay || "Not set",
+          reportedBy: `${user.firstName} ${user.lastName}` || user.email,
+          reporterContactNumber: user.contactNumber || "N/A",
           priority,
           clientDateTime: now,
           images: uploadedUrls,
+          email: user.email,
         }
       };
 
       console.log('payload', payload);
-      
-      // Direct submission - no retries for emergency speed
-      console.log('🚨 Emergency submission - sending immediately...');
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        console.log('⏰ Emergency timeout reached');
-        controller.abort();
-      }, 10000); // 10 second timeout for emergency
-      
-      const response = await fetch(`${baseUrl}/send-to-admins`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
+        const response = await fetch(`${baseUrl}/send-to-admins`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
 
-      if (response.ok) {
-        Alert.alert(
-          'Report Submitted',
-          'Your emergency report has been successfully sent.',
-          [{ text: 'OK', onPress: () => {
-            try {
-              navigation.goBack();
-            } catch (error) {
-              console.warn('Navigation error:', error);
-              // Fallback navigation if goBack fails
-              navigation.navigate('Home' as never);
-            }
-          }}]
-        );
-        setSelectedType('accident');
-        setDescription('');
-        console.log('✅ Emergency report submitted successfully');
+        if (response.ok) {
+          Alert.alert(
+            'Report Submitted',
+            'Your emergency report has been successfully sent.',
+            [{ text: 'OK', onPress: () => navigation.goBack() }]
+          );
+          setSelectedType('accident');
+          setDescription('');
+          console.log(`Submitted successfully`);
 
-      } else {
-        // Only fallback for specific server errors, not all errors
-        if (response.status >= 500 || response.status === 0) {
-          console.log('🔄 Server error detected, trying Firestore fallback...');
         } else {
-          // For client errors (4xx), don't fallback - show the actual error
           let errorTitle = `Submit Failed (Status: ${response.status})`;
           let errorMessage = 'An unknown error occurred.';
 
@@ -214,166 +171,13 @@ export default function ReportEmergencyScreen() {
             errorMessage = 'Could not parse error details from server.';
           }
           Alert.alert(errorTitle, errorMessage);
-          return;
         }
-        
-        try {
-          const emergencyData = {
-            alarmType: selectedType.toUpperCase(),
-            alarmLevel: priority,
-            message: description,
-            location: location,
-            images: uploadedUrls,
-            reportedBy: (() => {
-              try {
-                const anyUser = user as any;
-                if (anyUser?.firstName && anyUser?.lastName) {
-                  return `${anyUser.firstName} ${anyUser.lastName}`;
-                }
-                return anyUser?.email || anyUser?.displayName || 'Unknown User';
-              } catch {
-                return 'Unknown User';
-              }
-            })(),
-            reporterContactNumber: (user as any)?.contactNumber || "N/A",
-            barangay: (user as any)?.barangay || "Not set",
-            status: 'Pending',
-            createdAt: new Date(),
-            receivedAt: new Date(),
-            reportedAt: new Date(),
-            reporter: {
-              name: (() => {
-                try {
-                  const anyUser = user as any;
-                  if (anyUser?.firstName && anyUser?.lastName) {
-                    return `${anyUser.firstName} ${anyUser.lastName}`;
-                  }
-                  return anyUser?.email || anyUser?.displayName || 'Unknown User';
-                } catch {
-                  return 'Unknown User';
-                }
-              })(),
-              photoURL: (user as any)?.photoURL || null
-            }
-          };
-
-          await addDoc(collection(db, 'UserReports'), emergencyData);
-          
-          Alert.alert(
-            'Report Submitted (Fallback)',
-            'Your emergency report has been saved locally and will be processed.',
-            [{ text: 'OK', onPress: () => {
-              try {
-                navigation.goBack();
-              } catch (error) {
-                console.warn('Navigation error:', error);
-                navigation.navigate('Home' as never);
-              }
-            }}]
-          );
-          setSelectedType('accident');
-          setDescription('');
-          console.log(`Submitted to Firestore fallback successfully`);
-          return;
-        } catch (firestoreError) {
-          console.error('Firestore fallback failed:', firestoreError);
-          // Show server error if fallback also fails
-          Alert.alert('Submit Failed', 'Unable to submit report. Please try again later.');
-        }
+      } catch (error: any) {
+        Alert.alert('Submit Failed', `An error occurred: ${error.message || 'Please check your network connection.'}`);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error: any) {
-      console.error('Report submission error:', error);
-      
-      // Only try Firestore fallback for genuine network/server issues after all retries failed
-      if (error.name === 'AbortError' || 
-          error.message?.includes('Network request failed') || 
-          error.message?.includes('fetch') ||
-          error.message?.includes('timeout') ||
-          error.message?.includes('connection')) {
-        console.log('🔄 Network error detected, trying Firestore fallback...');
-        try {
-          const selectedEmergency = EMERGENCY_TYPES.find(e => e.key === selectedType);
-          const priority = selectedEmergency?.priority || "Medium";
-          const uploadedUrls = await uploadImagesAndGetUrls(attachedImages);
-
-          const emergencyData = {
-            alarmType: selectedType.toUpperCase(),
-            alarmLevel: priority,
-            message: description,
-            location: location,
-            images: uploadedUrls,
-            reportedBy: (() => {
-              try {
-                const anyUser = user as any;
-                if (anyUser?.firstName && anyUser?.lastName) {
-                  return `${anyUser.firstName} ${anyUser.lastName}`;
-                }
-                return anyUser?.email || anyUser?.displayName || 'Unknown User';
-              } catch {
-                return 'Unknown User';
-              }
-            })(),
-            reporterContactNumber: (user as any)?.contactNumber || "N/A",
-            barangay: (user as any)?.barangay || "Not set",
-            status: 'Pending',
-            createdAt: new Date(),
-            receivedAt: new Date(),
-            reportedAt: new Date(),
-            reporter: {
-              name: (() => {
-                try {
-                  const anyUser = user as any;
-                  if (anyUser?.firstName && anyUser?.lastName) {
-                    return `${anyUser.firstName} ${anyUser.lastName}`;
-                  }
-                  return anyUser?.email || anyUser?.displayName || 'Unknown User';
-                } catch {
-                  return 'Unknown User';
-                }
-              })(),
-              photoURL: (user as any)?.photoURL || null
-            }
-          };
-
-          await addDoc(collection(db, 'UserReports'), emergencyData);
-          
-          Alert.alert(
-            'Report Submitted (Offline)',
-            'Your emergency report has been saved locally and will be processed when connection is restored.',
-            [{ text: 'OK', onPress: () => {
-              try {
-                navigation.goBack();
-              } catch (error) {
-                console.warn('Navigation error:', error);
-                navigation.navigate('Home' as never);
-              }
-            }}]
-          );
-          setSelectedType('accident');
-          setDescription('');
-          console.log(`Submitted to Firestore fallback successfully`);
-          return;
-        } catch (firestoreError) {
-          console.error('Firestore fallback also failed:', firestoreError);
-        }
-      }
-      
-      let errorMessage = 'Please check your network connection.';
-      if (error.name === 'AbortError') {
-        errorMessage = 'Request timed out. The server may be unavailable.';
-      } else if (error.message?.includes('Network request failed')) {
-        errorMessage = 'Network error. Please check your internet connection.';
-      } else if (error.message?.includes('fetch')) {
-        errorMessage = 'Unable to connect to the server. Please try again later.';
-      } else {
-        errorMessage = error.message || 'An unexpected error occurred.';
-      }
-      
-      Alert.alert('Submit Failed', errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
   const handleTypeSelection = (type: string) => {
     if (type === 'other') {

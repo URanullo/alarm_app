@@ -14,7 +14,7 @@ import {
   useWindowDimensions,
   View
 } from 'react-native';
-import { db } from './firebaseConfig';
+import { db } from '../../services/firebaseConfig';
 
 type AdminAlarm = {
   id: string;
@@ -40,7 +40,7 @@ function formatTimestamp(ts?: { seconds: number; nanoseconds: number } | null) {
   return date.toLocaleString();
 }
 
-export default function EmergencyCasesScreen() {
+export default function NewsReportScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const [loading, setLoading] = useState(true);
@@ -54,10 +54,8 @@ export default function EmergencyCasesScreen() {
   }, [width]);
 
   useEffect(() => {
-    // Read from AdminAlarms collection instead of EmergencyCases
     const baseQuery = query(
-      collection(db, 'AdminAlarms'),
-      orderBy('sentAt', 'desc')
+      collection(db, 'admin_news_report'),
     );
     const unsub = onSnapshot(baseQuery, (snap) => {
       const items: AdminAlarm[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
