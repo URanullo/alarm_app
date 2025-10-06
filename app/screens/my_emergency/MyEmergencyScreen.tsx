@@ -52,16 +52,18 @@ export default function MyEmergencyScreen() {
 
     const baseQuery = query(
       collection(db, 'resident_emergency_reports'),
-      where('email', '==', user.email)
+      where('email', '==', user.email),
     );
 
     const unsub = onSnapshot(
       baseQuery,
       (snap) => {
-        const items: ResidentEmergency[] = snap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as any),
-        }));
+        const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+        items.sort((a, b) => {
+          const dateA = new Date(a.dateTime.seconds * 1000 || a.dateTime).getTime();
+          const dateB = new Date(b.dateTime.seconds * 1000 || b.dateTime).getTime();
+          return dateB - dateA; // descending
+        });
         setResidentEmergency(items);
         setLoading(false);
         setRefreshing(false);

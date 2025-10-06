@@ -20,11 +20,9 @@ import { db } from '../../services/firebaseConfig';
 type AdminNewsReport = {
   body: string;
   title: string;
-  alarmLevel: string;
   data: {
     alarmLevel: string;
     clientDateTime: string;
-    description: string;
     reportedBy: string;
     type: string;
   };
@@ -53,7 +51,7 @@ function formatTimestamp(
     minute: '2-digit',
   });
 }
-export default function NewsReportScreen() {
+export default function AlarmReportScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const [loading, setLoading] = useState(true);
@@ -68,7 +66,8 @@ export default function NewsReportScreen() {
 
   useEffect(() => {
     const baseQuery = query(
-      collection(db, 'admin_news_report'),
+      collection(db, 'admin_alarm_report'),
+      orderBy('data.clientDateTime', 'desc')
     );
     const unsub = onSnapshot(baseQuery, (snap) => {
       const items: AdminNewsReport[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
@@ -101,9 +100,9 @@ export default function NewsReportScreen() {
     return (
       <View style={[styles.card, { flex: 1 / numColumns }]}>
         {/* Alarm level badge */}
-        <View style={[styles.typeBadge, { backgroundColor: getAlarmLevelColor(item.alarmLevel) }]}>
+        <View style={[styles.typeBadge, { backgroundColor: getAlarmLevelColor(item.data?.alarmLevel) }]}>
           <Ionicons name="alert-circle" size={16} color="#fff" />
-          <Text style={styles.typeText}>{item.alarmLevel}</Text>
+          <Text style={styles.typeText}>{item.data?.alarmLevel}</Text>
         </View>
 
         {/* Title & Body */}
@@ -114,10 +113,9 @@ export default function NewsReportScreen() {
         <View style={{ marginTop: 10 }}>
           <Text style={styles.reporterName}>Details:</Text>
           <Text style={styles.bodyText}>Type: {item.data?.type ?? 'N/A'}</Text>
-          <Text style={styles.bodyText}>Description: {item.data?.description ?? 'N/A'}</Text>
           <Text style={styles.bodyText}>Reported By: {item.data?.reportedBy ?? 'N/A'}</Text>
           <Text style={styles.bodyText}>Reported Date: {formatTimestamp(item.data?.clientDateTime) ?? 'N/A'}</Text>
-          <Text style={styles.bodyText}>Alarm Level (Nested): {item.data?.alarmLevel ?? 'N/A'}</Text>
+          <Text style={styles.bodyText}>Alarm Level: {item.data?.alarmLevel ?? 'N/A'}</Text>
         </View>
       </View>
     );
