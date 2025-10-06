@@ -16,36 +16,49 @@ import {
 } from 'react-native';
 import { db } from '../../services/firebaseConfig';
 
-type AdminAlarm = {
-  id: string;
+
+type AdminNewsReport = {
+  body: string;
   title: string;
-  message: string;
-  alarmType: string;
-  alarmLevel: 'Low' | 'Medium' | 'High' | 'Critical';
-  location?: string;
-  images?: string[];
-  status: 'Active' | 'Acknowledged' | 'Resolved';
-  sentBy: string; // Admin name
-  sentAt: { seconds: number; nanoseconds: number };
-  expiresAt?: { seconds: number; nanoseconds: number };
-  targetAudience?: 'All' | 'Specific' | 'Barangay';
-  targetBarangays?: string[];
-  isUrgent: boolean;
-  instructions?: string;
+  alarmLevel: string;
+  data: {
+    alarmLevel: string;
+    clientDateTime: string;
+    description: string;
+    reportedBy: string;
+    type: string;
+  };
 };
 
-function formatTimestamp(ts?: { seconds: number; nanoseconds: number } | null) {
+function formatTimestamp(
+  ts?: { seconds: number; nanoseconds: number } | string | null
+) {
   if (!ts) return '';
-  const date = new Date(ts.seconds * 1000);
-  return date.toLocaleString();
-}
 
+  let date: Date;
+
+  if (typeof ts === 'string') {
+    date = new Date(ts);
+  } else if (typeof ts === 'object' && 'seconds' in ts) {
+    date = new Date(ts.seconds * 1000);
+  } else {
+    return '';
+  }
+
+  return date.toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 export default function NewsReportScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [adminAlarms, setAdminAlarms] = useState<AdminAlarm[]>([]);
+  const [adminNews, setAdminNews] = useState<AdminNewsReport[]>([]);
 
   const numColumns = useMemo(() => {
     if (width >= 1000) return 3;
@@ -58,8 +71,8 @@ export default function NewsReportScreen() {
       collection(db, 'admin_news_report'),
     );
     const unsub = onSnapshot(baseQuery, (snap) => {
-      const items: AdminAlarm[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
-      setAdminAlarms(items);
+      const items: AdminNewsReport[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+      setAdminNews(items);
       setLoading(false);
       setRefreshing(false);
     }, (_err) => {
@@ -73,81 +86,38 @@ export default function NewsReportScreen() {
     setRefreshing(true);
   };
 
-  const renderCard = ({ item }: { item: AdminAlarm }) => {
+  const renderCard = ({ item }: { item: AdminNewsReport }) => {
     const getAlarmLevelColor = (level: string) => {
       switch (level) {
-        case 'Critical': return '#dc2626';
-        case 'High': return '#ea580c';
-        case 'Medium': return '#d97706';
-        case 'Low': return '#16a34a';
+        case 'Advisory': return '#2e7d32';
+        case 'Alert': return '#fdd835';
+        case 'Warning': return '#fb8c00';
+        case 'Evacuation': return '#e53935';
+        case 'Emergency': return '#000000';
         default: return '#6b7280';
       }
     };
 
-    const getStatusColor = (status: string) => {
-      switch (status) {
-        case 'Active': return '#fde68a';
-        case 'Acknowledged': return '#bfdbfe';
-        case 'Resolved': return '#bbf7d0';
-        default: return '#f3f4f6';
-      }
-    };
-
     return (
-      <View style={[styles.card, { flex: 1 / numColumns }]}> 
-        <View style={styles.headerRow}>
-          <View style={[styles.typeBadge, { backgroundColor: getAlarmLevelColor(item.alarmLevel) }]}>
-            <Ionicons name="megaphone" size={16} color="#fff" />
-            <Text style={styles.typeText}>{item.alarmType}</Text>
-          </View>
-          <View style={[styles.statusPill, { backgroundColor: getStatusColor(item.status) }]}>
-            <Text style={styles.statusText}>{item.status}</Text>
-          </View>
+      <View style={[styles.card, { flex: 1 / numColumns }]}>
+        {/* Alarm level badge */}
+        <View style={[styles.typeBadge, { backgroundColor: getAlarmLevelColor(item.alarmLevel) }]}>
+          <Ionicons name="alert-circle" size={16} color="#fff" />
+          <Text style={styles.typeText}>{item.alarmLevel}</Text>
         </View>
 
-        <Text style={styles.titleText} numberOfLines={2}>{item.title}</Text>
-        <Text style={styles.bodyText} numberOfLines={3}>{item.message}</Text>
+        {/* Title & Body */}
+        <Text style={styles.titleText}>{item.title}</Text>
+        <Text style={styles.bodyText}>{item.body}</Text>
 
-        <View style={styles.metaRow}>
-          <View style={styles.avatar}>
-            <Ionicons name="shield-checkmark" size={28} color="#059669" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.reporterName} numberOfLines={1}>Admin: {item.sentBy}</Text>
-            <Text style={styles.dateText}>{formatTimestamp(item.sentAt)}</Text>
-          </View>
-        </View>
-
-        {item.images && item.images.length > 0 ? (
-          <View style={styles.imageStrip}>
-            {item.images.slice(0, 3).map((img, idx) => (
-              <Image key={idx} source={{ uri: img }} style={styles.imageThumb} />
-            ))}
-          </View>
-        ) : null}
-
-        {item.location ? (
-          <View style={styles.locationRow}>
-            <Ionicons name="location" size={16} color="#6b7280" />
-            <Text style={styles.locationText} numberOfLines={1}>{item.location}</Text>
-          </View>
-        ) : null}
-
-        {item.instructions ? (
-          <View style={styles.instructionsRow}>
-            <Ionicons name="information-circle" size={16} color="#6b7280" />
-            <Text style={styles.instructionsText} numberOfLines={2}>{item.instructions}</Text>
-          </View>
-        ) : null}
-
-        <View style={styles.footerRow}>
-          <View style={[styles.priorityBadge, { backgroundColor: getAlarmLevelColor(item.alarmLevel) }]}>
-            <Text style={[styles.priorityText, { color: '#fff' }]}>{item.alarmLevel}</Text>
-          </View>
-          <TouchableOpacity style={[styles.ctaBtn, item.isUrgent && styles.urgentBtn]} activeOpacity={0.8}>
-            <Ionicons name="open-outline" size={16} color="#fff" />
-            <Text style={styles.ctaText}>{item.isUrgent ? 'URGENT' : 'View Details'}</Text>
-          </TouchableOpacity>
+        {/* Nested Data Section */}
+        <View style={{ marginTop: 10 }}>
+          <Text style={styles.reporterName}>Details:</Text>
+          <Text style={styles.bodyText}>Type: {item.data?.type ?? 'N/A'}</Text>
+          <Text style={styles.bodyText}>Description: {item.data?.description ?? 'N/A'}</Text>
+          <Text style={styles.bodyText}>Reported By: {item.data?.reportedBy ?? 'N/A'}</Text>
+          <Text style={styles.bodyText}>Reported Date: {formatTimestamp(item.data?.clientDateTime) ?? 'N/A'}</Text>
+          <Text style={styles.bodyText}>Alarm Level (Nested): {item.data?.alarmLevel ?? 'N/A'}</Text>
         </View>
       </View>
     );
@@ -155,28 +125,20 @@ export default function NewsReportScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={22} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.screenTitle}>Admin Alarms</Text>
-        <View style={{ width: 32 }} />
-      </View>
       {loading ? (
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color="#2563eb" />
         </View>
       ) : (
         <FlatList
-          data={adminAlarms}
+          data={adminNews}
           key={numColumns}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.id ?? Math.random().toString()}
           numColumns={numColumns}
-          columnWrapperStyle={numColumns > 1 ? styles.columnWrap : undefined}
-          contentContainerStyle={styles.listContent}
           renderItem={renderCard}
+          contentContainerStyle={styles.listContent}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={<Text style={styles.bodyText}>No admin alarms yet.</Text>}
+          ListEmptyComponent={<Text style={styles.bodyText}>No reports yet.</Text>}
         />
       )}
     </SafeAreaView>
