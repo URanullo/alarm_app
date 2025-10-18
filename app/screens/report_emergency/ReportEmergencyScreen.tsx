@@ -5,10 +5,11 @@ import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from 'expo-image-picker';
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import getUserLocation from '../../screens/home/LocationService';
 import { storage } from '../../services/firebaseConfig';
 import { useUser } from '../../UserContext';
+import CustomAlertModal from '../../components/CustomAlertModal';
 
 const baseUrl = Constants.expoConfig?.extra?.baseUrl;
 console.log('baseUrl', baseUrl);
@@ -63,8 +64,23 @@ export default function ReportEmergencyScreen() {
   const [showConfirmation, setShowConfirmation] = useState<boolean>(false);
   const [showCustomTypeModal, setShowCustomTypeModal] = useState<boolean>(false);
   const [showLocationModal, setShowLocationModal] = useState<boolean>(false);
+  const [showAlert, setShowAlert] = useState<boolean>(false);
+  const [alertData, setAlertData] = useState({ title: '', message: '', type: 'info' as 'success' | 'error' | 'warning' | 'info' });
   const navigation = useNavigation();
   const { user } = useUser();
+
+  const showCustomAlert = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+    setAlertData({ title, message, type });
+    setShowAlert(true);
+  };
+
+  const handleAlertPress = () => {
+    setShowAlert(false);
+    // Navigate back if it's a success alert
+    if (alertData.type === 'success') {
+      navigation.goBack();
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -88,15 +104,15 @@ export default function ReportEmergencyScreen() {
 
  const handleSubmit = async () => {
     if (!user) {
-      Alert.alert('Authentication Error', 'You must be logged in to submit a report.');
+      showCustomAlert('Authentication Error', 'You must be logged in to submit a report.', 'error');
       return;
     }
     if (!baseUrl) {
-        Alert.alert('Configuration Error', 'The base URL is not configured. Cannot submit report.');
+        showCustomAlert('Configuration Error', 'The base URL is not configured. Cannot submit report.', 'error');
         return;
     }
     if (!selectedType || !description.trim()) {
-        Alert.alert('Missing Information', 'Please select an emergency type and provide a description.');
+        showCustomAlert('Missing Information', 'Please select an emergency type and provide a description.', 'warning');
         return;
     }
 
@@ -138,10 +154,10 @@ export default function ReportEmergencyScreen() {
         });
 
         if (response.ok) {
-          Alert.alert(
+          showCustomAlert(
             'Report Submitted',
             'Your emergency report has been successfully sent.',
-            [{ text: 'OK', onPress: () => navigation.goBack() }]
+            'success'
           );
           setSelectedType('accident');
           setDescription('');
@@ -170,10 +186,10 @@ export default function ReportEmergencyScreen() {
             console.warn('Failed to parse error details:', e);
             errorMessage = 'Could not parse error details from server.';
           }
-          Alert.alert(errorTitle, errorMessage);
+          showCustomAlert(errorTitle, errorMessage, 'error');
         }
       } catch (error: any) {
-        Alert.alert('Submit Failed', `An error occurred: ${error.message || 'Please check your network connection.'}`);
+        showCustomAlert('Submit Failed', `An error occurred: ${error.message || 'Please check your network connection.'}`, 'error');
       } finally {
         setIsLoading(false);
       }
@@ -198,7 +214,7 @@ export default function ReportEmergencyScreen() {
   const handleImagePicker = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
-      Alert.alert('Permission required', 'You need to grant access to your gallery.');
+      showCustomAlert('Permission required', 'You need to grant access to your gallery.', 'warning');
       return;
     }
 
@@ -480,6 +496,15 @@ export default function ReportEmergencyScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Custom Alert Modal */}
+      <CustomAlertModal
+        visible={showAlert}
+        title={alertData.title}
+        message={alertData.message}
+        type={alertData.type}
+        onPress={handleAlertPress}
+      />
     </KeyboardAvoidingView>
   );
 }
