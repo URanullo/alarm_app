@@ -5,12 +5,13 @@ import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { useUser } from '../../UserContext';
@@ -20,6 +21,16 @@ export default function ProfileScreen() {
   const { user, logout } = useUser();
   const auth: Auth = getAuth();
   const [loading, setLoading] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showCustomAlert, setShowCustomAlert] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+
+  const showAlert = (title: string, message: string) => {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setShowCustomAlert(true);
+  };
 
   const displayName = useMemo(() => {
     if (!user) return 'Guest';
@@ -81,20 +92,17 @@ export default function ProfileScreen() {
   }, [user]);
 
   const handleLogout = async () => {
-    Alert.alert("Confirm", "Are you sure you want to log out?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await logout();
-          } catch (e: any) {
-            Alert.alert("Logout Error", e.message);
-          }
-        },
-      },
-    ]);
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = async () => {
+    try {
+      await logout();
+      setShowLogoutConfirm(false);
+    } catch (e: any) {
+      setShowLogoutConfirm(false);
+      showAlert("Logout Error", e.message);
+    }
   };
 
   const handleEditProfile = async () => {
@@ -102,7 +110,7 @@ export default function ProfileScreen() {
 
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
-      Alert.alert("Permission required", "You need to grant access to your gallery.");
+      showAlert("Permission required", "You need to grant access to your gallery.");
       return;
     }
 
@@ -138,9 +146,9 @@ export default function ProfileScreen() {
           await updateProfile(auth.currentUser, { photoURL: downloadURL });
         }
 
-        Alert.alert("Profile Updated", "Your profile picture has been updated.");
+        showAlert("Profile Updated", "Your profile picture has been updated.");
       } catch (err: any) {
-        Alert.alert("Error", err.message);
+        showAlert("Error", err.message);
       } finally {
         setLoading(false);
       }
@@ -213,6 +221,52 @@ export default function ProfileScreen() {
       <Pressable style={styles.dangerButton} onPress={handleLogout}>
         <Text style={styles.dangerButtonText}>Logout</Text>
       </Pressable>
+
+      {/* Logout Confirmation Modal */}
+      <Modal visible={showLogoutConfirm} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmContainer}>
+            <View style={styles.confirmIconContainer}>
+              <Text style={styles.confirmIcon}>🚪</Text>
+            </View>
+            <Text style={styles.confirmTitle}>Confirm Logout</Text>
+            <Text style={styles.confirmMessage}>Are you sure you want to log out?</Text>
+            <View style={styles.confirmButtons}>
+              <TouchableOpacity 
+                style={[styles.confirmButton, styles.cancelConfirmButton]}
+                onPress={() => setShowLogoutConfirm(false)}
+              >
+                <Text style={styles.cancelConfirmButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.confirmButton, styles.logoutConfirmButton]}
+                onPress={confirmLogout}
+              >
+                <Text style={styles.logoutConfirmButtonText}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Custom Alert Modal */}
+      <Modal visible={showCustomAlert} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.alertContainer}>
+            <View style={styles.alertIconContainer}>
+              <Text style={styles.alertIcon}>⚠️</Text>
+            </View>
+            <Text style={styles.alertTitle}>{alertTitle}</Text>
+            <Text style={styles.alertMessage}>{alertMessage}</Text>
+            <TouchableOpacity 
+              style={styles.alertButton}
+              onPress={() => setShowCustomAlert(false)}
+            >
+              <Text style={styles.alertButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -362,5 +416,142 @@ const styles = StyleSheet.create({
   dangerButtonText: {
     color: '#fff',
     fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  confirmContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 28,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    elevation: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  confirmIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#e3f2fd',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  confirmIcon: {
+    fontSize: 28,
+  },
+  confirmTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  confirmMessage: {
+    fontSize: 16,
+    color: '#495057',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  confirmButtons: {
+    flexDirection: 'row',
+    gap: 16,
+    width: '100%',
+  },
+  confirmButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  cancelConfirmButton: {
+    backgroundColor: '#6c757d',
+  },
+  logoutConfirmButton: {
+    backgroundColor: '#E53935',
+  },
+  cancelConfirmButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  logoutConfirmButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  alertContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 28,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    elevation: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  alertIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#fff3cd',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  alertIcon: {
+    fontSize: 28,
+  },
+  alertTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  alertMessage: {
+    fontSize: 16,
+    color: '#495057',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  alertButton: {
+    backgroundColor: '#E53935',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  alertButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
   },
 });
