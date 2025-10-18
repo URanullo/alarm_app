@@ -1,11 +1,14 @@
 import { Audio } from 'expo-av';
 import * as Notifications from 'expo-notifications';
 import { Stack } from 'expo-router';
-import { useEffect } from 'react';
-import { Alert } from 'react-native';
+import { useEffect, useState } from 'react';
 import { UserProvider } from './UserContext';
+import EmergencyAlertModal from './components/EmergencyAlertModal';
 
 export default function RootLayout() {
+  const [showEmergencyAlert, setShowEmergencyAlert] = useState(false);
+  const [alertData, setAlertData] = useState({ title: '', message: '' });
+
   useEffect(() => {
    (async () => {
      await Notifications.setNotificationChannelAsync('critical', {
@@ -23,11 +26,12 @@ export default function RootLayout() {
     subscription = Notifications.addNotificationReceivedListener(async (notification) => {
     console.log('📱 Mobile notification received:', notification);
     
-    // Show alert
-    Alert.alert(
-      notification.request.content.title || 'Notification',
-      notification.request.content.body || ''
-    );
+    // Show custom emergency alert modal
+    setAlertData({
+      title: notification.request.content.title || 'Emergency Notification',
+      message: notification.request.content.body || 'An emergency alert has been received.'
+    });
+    setShowEmergencyAlert(true);
     
     // Play sound
     (async () => {
@@ -46,6 +50,12 @@ export default function RootLayout() {
   return (
     <UserProvider>
       <Stack screenOptions={{ headerShown: false }} />
+      <EmergencyAlertModal
+        visible={showEmergencyAlert}
+        title={alertData.title}
+        message={alertData.message}
+        onDismiss={() => setShowEmergencyAlert(false)}
+      />
     </UserProvider>
   );
 }
